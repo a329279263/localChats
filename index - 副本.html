@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>聊天室</title>
+    <style>
+        #chat-content {
+            height: 80vh;
+            overflow-y: scroll;
+        }
+        #input-section {
+            height: 20vh;
+            display: flex;
+            align-items: center;
+        }
+        #name {
+            margin-right: 10px;
+        }
+        #history {
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div id="chat-content" ></div>
+        <div id="input-section">
+            <table>
+                <tr>
+                    <td>
+                        <label>名称：</label>
+                    </td>
+                    <td>
+                        <input type="text" id="name" placeholder="请输入您的名称" value="匿名"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label>消息：</label>
+                    </td>
+                    <td>
+                        <textarea id="history"></textarea>
+                    </td>
+                </tr> 
+                <tr>
+                    <td>
+                        <button onclick="sendMessage()">发送</button>
+                    </td>
+                </tr>
+            </table>
+            
+        </div>
+    </div>
+    
+    <script>
+        var socket;
+
+        // 连接 WebSocket 服务器
+        (function () {
+            socket = new WebSocket("ws://"+location.host+"/ws");
+
+            // 监听 WebSocket 连接成功事件
+            socket.onopen = function(event) {
+                console.log("WebSocket连接已建立");
+            };
+
+            // 监听 WebSocket 接收到消息事件
+            socket.onmessage = function(event) {
+                var messageBlob = event.data;
+                var fileReader = new FileReader();
+                fileReader.onload = function() {
+                    var message = fileReader.result;
+                    putHistory(message);
+                };
+                fileReader.readAsText(messageBlob);
+            };
+
+            // 监听 WebSocket 关闭事件
+            socket.onclose = function(event) {
+                console.log("WebSocket连接已关闭");
+            };
+
+            // 监听 WebSocket 错误事件
+            socket.onerror = function(event) {
+                console.error("WebSocket连接发生错误");
+            };
+        })();
+
+        // 发送消息的方法
+        function sendMessage() {
+            var name = document.getElementById("name");
+            var textBox = document.getElementById("history");
+            var message = (name.value || "匿名") + ": " + textBox.value;
+            textBox.value = "";
+            console.log("send")
+            socket.send(message);
+        }
+        function putHistory(message) {
+            var chatContent = document.getElementById("chat-content");
+            chatContent.innerHTML += "<div>" + message + " <button onclick='copyMessage(this)'>复制</button></div>";
+        }
+
+        function copyMessage(button) {
+            var message = button.previousSibling.textContent; // 获取聊天记录文本
+            var tempInput = document.createElement("input"); // 创建一个临时输入框
+            tempInput.value = message; // 设置临时输入框的值为聊天记录文本
+            document.body.appendChild(tempInput); // 将临时输入框添加到页面中
+            tempInput.select(); // 选中临时输入框的内容
+            document.execCommand("copy"); // 将选中的内容复制到剪贴板
+            document.body.removeChild(tempInput); // 移除临时输入框
+        }
+
+    </script>
+</body>
+</html>

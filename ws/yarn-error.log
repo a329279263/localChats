@@ -1,0 +1,27 @@
+Arguments: 
+  D:\DevelopENV\Node.js\node.exe D:\DevelopENV\Yarn\bin\yarn.js add ws
+
+PATH: 
+  C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;D:\DevelopENV\Node.js\;D:\DevelopENV\Yarn\bin\;D:\软件\7-Zip\;D:\DevelopSoft\Git\usr\bin;D:\DevelopSoft\Git\cmd;D:\DevelopENV\netcat-win32-1.12;D:\DevelopENV\flutter\bin;D:\DevelopENV\Ruby193\bin;D:\DevelopSoft\apache-maven-3.6.3\bin;D:\DevelopENV\jdk-17.0.4\bin;E:\快捷方式;D:\软件\7-Zip;D:\DevelopENV\Sencha\Cmd\\4.0.3.74;;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Users\LZH\AppData\Local\Microsoft\WindowsApps;D:\DevelopENV\jdk-17.0.4\bin;
+
+Yarn version: 
+  1.22.4
+
+Node version: 
+  18.16.0
+
+Platform: 
+  win32 x64
+
+Trace: 
+  Error: getaddrinfo ENOTFOUND registry.yarnpkg.com
+      at GetAddrInfoReqWrap.onlookup [as oncomplete] (node:dns:107:26)
+
+npm manifest: 
+  No manifest
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

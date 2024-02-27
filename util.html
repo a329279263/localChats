@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html  lang="en">
+<head>
+ <meta charset="UTF-8">
+    <title>Excel列转in条件</title>
+</head>
+<body>
+    <div>
+        <textarea id="excelInput" placeholder="Excel列转in条件 Ctrl+Enter 执行" rows="4" cols="50"></textarea>
+    </div>
+	  <div>
+        <textarea id="output" rows="4" cols="50" readonly></textarea>
+    </div>
+
+    <div>
+        <input type="text" id="daysInput" placeholder="请输入天数">
+        <button onclick="addDays()">计算N天后的时间</button>
+    </div>
+
+  
+
+    <script type="text/javascript">
+	
+	 document.getElementById("excelInput").addEventListener("keydown", function(event) {
+            if (event.keyCode === 13 && event.ctrlKey) {
+                convertToIn();
+            }
+        });
+
+        document.getElementById("daysInput").addEventListener("keydown", function(event) {
+            if (event.keyCode === 13) {
+                addDays();
+            }
+        });
+        function convertToIn() {
+            var input = document.getElementById("excelInput").value;
+            var lines = input.split('\n');
+            var formattedText = "";
+
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (line) {
+                    if (formattedText) {
+                        formattedText += ", ";
+                    }
+                    formattedText += "'" + line + "'";
+                }
+            }
+
+            document.getElementById("output").value = formattedText;
+			 copyToClipboard(formattedText, "请直接粘贴到in条件中");
+        }
+
+        function addDays() {
+            var daysInput = document.getElementById("daysInput");
+            var days = parseInt(daysInput.value);
+            if (!isNaN(days)) {
+                var currentDate = new Date();
+                var futureDate = new Date(currentDate.getTime() + (days * 24 * 60 * 60 * 1000));
+                daysInput.value = futureDate.getTime();
+                setTimeout(function () {
+                    daysInput.value = days;
+                }, 5000);
+            }
+        }
+		
+		 function copyToClipboard(result, msg) {
+            navigator.clipboard.writeText(result).then(function() {
+                console.log("Copy success");
+                showMessage("已复制：" + msg);
+            }).catch(function() {
+                console.log("Copy error");
+                showMessage("操作失败，执行过程中鼠标离开该面板会导致复制失败");
+            });
+        }
+
+        function showMessage(msg) {
+            var messageDiv = document.createElement("div");
+            messageDiv.textContent = msg;
+            document.body.appendChild(messageDiv);
+            setTimeout(function() {
+                document.body.removeChild(messageDiv);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>啊对对对</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #chat-content {
+            flex: 1;
+            padding: 10px;
+            overflow-y: scroll;
+            background-color: #f0f0f0;
+        }
+
+        #chat-content div {
+            margin-bottom: 10px;
+        }
+
+
+        .message-text {
+            flex: 1;
+        }
+
+        .message-actions button {
+            margin-left: 5px;
+        }
+
+        #input-section {
+            display: flex;
+            align-items: center;
+            padding: 40px;
+            background-color: #fff;
+        }
+
+        #text {
+            height: 200px;
+            width: 400px;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #sendButton {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }
+
+        #file-label {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .bottom-container {
+            display: flex;
+            flex-direction: row;
+        }
+        .left-column, .right-column {
+            flex: 1;
+        }
+        .middle-column {
+            width: 500px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="chat-content"></div>
+    <div id="input-section">
+        <div class="bottom-container">
+            <div class="right-column">
+                消息发送区：
+                <div>
+                    <textarea id="text" placeholder="粘贴这里Ctrl+Enter发送消息"></textarea>
+                    <button id="sendButton" onclick="sendMessage()">发送</button>
+                    <input type="file" id="file-input" onchange="sendFile(event)">
+                    <label for="file-input" id="file-label">上传文件</label>
+                </div>
+
+            </div>
+            <div class="middle-column" id="middle-output">
+                更新功能：<br>
+                    2024年2月27日：<br>
+                        1.定时重复连接bug，2.时间戳转年月日，3.消息换行功能<br>
+                <br>
+                输出内容：
+            </div>
+            <div class="left-column">
+                SQL工具：
+                <div>
+                    <textarea id="excelInput" placeholder="Excel列转in条件 Ctrl+Enter 执行" rows="4" cols="50"></textarea>
+                </div>
+                <div>
+                    <textarea id="output" rows="4" cols="50" readonly></textarea>
+                </div>
+                <div>
+                    <input type="number" id="daysInput" placeholder="请输入天数">
+                    <button onclick="addDays()">计算N天后的时间</button>
+                </div>
+              <div>
+                <input type="number" id="timeConvert"  placeholder="时间戳转换">
+                <button onclick="timeConvert()">转换</button>
+              </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    let socket;
+    const nameInput = document.getElementById("name");
+    const textBox = document.getElementById("text");
+    const chatContent = document.getElementById("chat-content");
+    const fileInput = document.getElementById("file-input");
+    const fileLabel = document.getElementById("file-label");
+
+    document.getElementById("text").addEventListener("keydown", function (event) {
+        event.keyCode === 13 && event.ctrlKey && sendMessage();
+    });
+    // 连接 WebSocket 服务器
+    (function () {
+        let reconnectTimer = null;
+
+        function connect() {
+            // 如果WebSocket连接已经打开 || 定时器在运行，则直接返回
+            if ((socket && socket.readyState === WebSocket.OPEN) || reconnectTimer) {
+                return;
+            }
+
+            socket = new WebSocket("ws://" + location.host + "/ws");
+
+            function isFile(messageBlob) {
+                try {
+                    let json = JSON.parse(messageBlob);
+                    return !!json["fileName"];
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            // 监听 WebSocket 接收到消息事件
+            socket.onmessage = function (event) {
+                let messageBlob = event.data;
+                let fileReader = new FileReader();
+                fileReader.onload = function () {
+                    let message = fileReader.result;
+                    //心跳检测消息
+                    if (message === heartbeat) {
+                        console.debug(message);
+                        return;
+                    }
+                    if (isFile(message)) {
+                        let json = JSON.parse(message);
+                        addFileToChat(json);
+                    } else {
+                        addMessageToChat(message);
+                    }
+                };
+                fileReader.readAsText(messageBlob);
+            };
+
+            // 监听 WebSocket 连接成功事件
+            socket.onopen = function (event) {
+                console.log("WebSocket连接已建立", new Date(), event);
+                // 连接成功时清除重连定时器
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+            };
+
+            // 监听 WebSocket 错误事件
+            socket.onerror = function (event) {
+                console.error("WebSocket连接发生错误", new Date(), event);
+            };
+
+            // 监听 WebSocket 关闭事件
+            socket.onclose = function (event) {
+                console.info("WebSocket连接已关闭", new Date(), event);
+                // 重新连接
+                if (!reconnectTimer) {
+                    reconnectTimer = setTimeout(function () {
+                        connect();
+                        reconnectTimer = null;
+                    }, 5000);
+                }
+            };
+        }
+
+        let heartbeat="heartbeat";
+        // 发送心跳包
+        function sendHeartbeat() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                // console.log("心跳检测..", new Date())
+                try {
+                    socket.send(heartbeat);
+                } catch (e) {
+                    console.error("心跳检测..", e);
+                    connect();
+                }
+            } else {
+                connect();
+            }
+        }
+        connect();
+        setInterval(sendHeartbeat, 1000*20);
+
+    })();
+
+
+    let count = 0;
+    let tipsData = ['消息太多了！', '大傻春你想干什么！', '发送消息这么快，小罗电脑快爆了！', '小罗哭晕在厕所...', '小罗快来修BUG...', '张凯：有BUG！', '小罗：你放P！', '有内鬼，终止交易！'];
+
+    (function () {
+        setInterval(() => {
+            count = 0;
+        }, 1000 * 20)
+    })()
+
+    function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function successHandle() {
+        if (count > 10) {
+            alert(tipsData[getRandomInt(0, tipsData.length - 1)])
+        }
+        count++;
+    }
+
+    // 发送消息的方法
+    function sendMessage() {
+        // let name = nameInput.value || "匿名";
+        // let message = name + ": " + textBox.value;
+        let message = textBox.value;
+        textBox.value = "";
+        socket.send(message);
+        successHandle();
+    }
+
+    let lastFile = {};
+
+    // 发送文件的方法
+    function sendFile(event) {
+        let files = event.target.files;
+        if (files.length <= 0) return;
+        let file = files[0];
+        if (lastFile.fileName === file.name && lastFile.fileSize === file.size) return alert("你小子两次上传同一个文件，想干嘛？");
+        lastFile = {fileName: file.name, fileSize: file.size}
+        let reader = new FileReader();
+        reader.onload = function (e) {
+            let fileData = e.target.result;
+            let fileName = file.name;
+            let message = {
+                fileName: fileName,
+                fileData: fileData
+            };
+            socket.send(JSON.stringify(message));
+            event.target.value = "";
+            successHandle();
+
+            // let name = nameInput.value || "匿名";
+            // putHistory(name + ": 上传了文件" + fileName);
+        };
+        reader.readAsDataURL(file);
+    }
+
+
+    // 添加消息到聊天记录
+    function addMessageToChat(message) {
+        let div = document.createElement("div");
+        div.innerHTML = `
+                <div class="message-text">${message}</div>
+                <button onclick="copyMessage(this.previousElementSibling.textContent)">复制</button>
+                <br>
+            `;
+        chatContent.appendChild(div);
+        chatContent.scrollTop = chatContent.scrollHeight;
+    }
+
+    // 添加文件到聊天记录
+    function addFileToChat(json) {
+        let div = document.createElement("div");
+        let fileName = json.fileName;
+        let fileData = json.fileData;
+        div.innerHTML = `
+                <div class="message-text">${fileName}</div>
+                <input style="display: none" value="${fileName}"/>
+                <input style="display: none" value="${fileData}"/>
+                <button onclick="downloadMessage(this)">下载</button>
+                <br>
+            `;
+        chatContent.appendChild(div);
+        chatContent.scrollTop = chatContent.scrollHeight;
+    }
+
+    
+
+
+    // 下载消息文件
+    function downloadMessage(button) {
+        let fileData = button.previousElementSibling;
+        let filename = fileData.previousElementSibling;
+        let filenameValue = filename.value;
+        let fileDataValue = fileData.value;
+        let downloadLink = document.createElement("a");
+        downloadLink.download = filenameValue;
+        downloadLink.href = fileDataValue;
+        downloadLink.click();
+    }
+
+</script>
+
+<script type="text/javascript">
+
+    document.getElementById("excelInput").addEventListener("keydown", function(event) {
+        event.keyCode === 13 && event.ctrlKey && convertToIn();
+    });
+    document.getElementById("daysInput").addEventListener("keydown", function(event) {
+        event.keyCode === 13 && addDays();
+    });
+
+    document.getElementById("timeConvert").addEventListener("keydown", function(event) {
+        event.keyCode === 13 && timeConvert();
+    });
+    
+    
+    function convertToIn() {
+        var input = document.getElementById("excelInput").value;
+        var lines = input.split('\n');
+        var formattedText = "";
+
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (line) {
+                if (formattedText) {
+                    formattedText += ", ";
+                }
+                formattedText += "'" + line + "'";
+            }
+        }
+
+        document.getElementById("output").value = formattedText;
+        copyMessage(formattedText);
+    }
+
+    function addDays() {
+        var daysInput = document.getElementById("daysInput");
+        var days = parseInt(daysInput.value);
+        if (isNaN(days))return
+        var currentDate = new Date();
+        var futureDate = new Date(currentDate.getTime() + (days * 24 * 60 * 60 * 1000));
+        daysInput.value = futureDate.getTime();
+        setTimeout(function () {
+            daysInput.value = days;
+        }, 5000);
+    }
+    function timeConvert() {
+        const timeConvert = document.getElementById('timeConvert')
+        let value = timeConvert.valueAsNumber
+        console.log(timeConvert,value)
+        if (typeof value!=="number" || isNaN(value))return
+        let result=timestampToDateTime(value);
+        timeConvert.value=result
+        showMessage("转换："+result);
+    }
+
+    function timestampToDateTime(timestamp) {
+        const date = new Date(timestamp);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // 复制消息文本到剪贴板
+    function copyMessage(messageText) {
+        console.log(messageText)
+        let tempInput = document.createElement("textarea");
+        tempInput.value = messageText;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        showMessage("已复制："+messageText);
+    }
+    function showMessage(msg) {
+        var messageDiv = document.createElement("label");
+        messageDiv.textContent = msg;
+        document.getElementById("middle-output").appendChild(messageDiv);
+        setTimeout(function() {
+            messageDiv.remove();
+        }, 3000);
+    }
+</script>
+</body>
+</html>

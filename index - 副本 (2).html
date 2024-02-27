@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>聊天室</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #chat-content {
+            flex: 1;
+            padding: 10px;
+            overflow-y: scroll;
+            background-color: #f0f0f0;
+        }
+
+        #chat-content div {
+            margin-bottom: 10px;
+        }
+
+        .message {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .message-text {
+            flex: 1;
+        }
+
+        .message-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .message-actions button {
+            margin-left: 5px;
+        }
+
+        #input-section {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #fff;
+        }
+
+        #name {
+            margin-right: 10px;
+        }
+
+        #text {
+            width: 80%;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #file-label {
+            background-color: #4CAF50;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="chat-content"></div>
+    <div id="input-section">
+        <table>
+            <tr>
+                <td>
+                    <label>名称：</label>
+                </td>
+                <td>
+                    <input type="text" id="name" placeholder="请输入您的名称" value="匿名">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <label>消息：</label>
+                </td>
+                <td>
+                    <textarea id="text"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <button onclick="sendMessage()">发送</button>
+                </td>
+                <td>
+                    <input type="file" id="file-input" onchange="sendFile(event)">
+                    <label for="file-input" id="file-label">上传文件</label>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script>
+    let socket;
+    const nameInput = document.getElementById("name");
+    const textBox = document.getElementById("text");
+    const chatContent = document.getElementById("chat-content");
+    const fileInput = document.getElementById("file-input");
+    const fileLabel = document.getElementById("file-label");
+
+    // 连接 WebSocket 服务器
+    (function () {
+        socket = new WebSocket("ws://" + location.host + "/ws");
+
+        // 监听 WebSocket 连接成功事件
+        socket.onopen = function(event) {
+            console.log("WebSocket连接已建立");
+        };
+        
+        function isFile(messageBlob) {
+            try {
+                let json = JSON.parse(messageBlob);
+                return !!json["fileName"];
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 监听 WebSocket 接收到消息事件
+        socket.onmessage = function(event) {
+
+            let messageBlob = event.data;
+            let fileReader = new FileReader();
+            fileReader.onload = function() {
+                let message = fileReader.result;
+                if (isFile(message)) {
+                    let json = JSON.parse(message);
+                    addFileToChat(json);
+                } else {
+                    addMessageToChat(message);
+                }
+            };
+            fileReader.readAsText(messageBlob);
+            
+          
+        };
+
+        // 监听 WebSocket 关闭事件
+        socket.onclose = function(event) {
+            console.log("WebSocket连接已关闭");
+        };
+
+        // 监听 WebSocket 错误事件
+        socket.onerror = function(event) {
+            console.error("WebSocket连接发生错误");
+        };
+    })();
+
+    // 发送消息的方法
+    function sendMessage() {
+        let name = nameInput.value || "匿名";
+        let message = name + ": " + textBox.value;
+        textBox.value = "";
+        socket.send(message);
+    }
+
+    // 发送文件的方法
+    function sendFile(event) {
+        let file = event.target.files[0];
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let fileData = e.target.result;
+            let fileName = file.name;
+            let message = {
+                fileName: fileName,
+                fileData: fileData
+            };
+            socket.send(JSON.stringify(message));
+            // let name = nameInput.value || "匿名";
+            // putHistory(name + ": 上传了文件" + fileName);
+        };
+        reader.readAsDataURL(file);
+    }
+    
+
+    // 添加消息到聊天记录
+    function addMessageToChat(message) {
+        let div = document.createElement("div");
+        div.innerHTML = `
+                <span class="message-text">${message}</span>
+                <button onclick="copyMessage(this)">复制</button>
+            `;
+        chatContent.appendChild(div);
+    }
+
+    // 添加文件到聊天记录
+    function addFileToChat(json) {
+        console.log(json)
+        let div = document.createElement("div");
+        let fileName = json.fileName;
+        let fileData = json.fileData;
+        div.innerHTML = `
+                <span class="message-text">${fileName}</span>
+                <input style="display: none" value="${fileName}"/>
+                <input style="display: none" value="${fileData}"/>
+                <button onclick="downloadMessage(this)">下载</button>
+            `;
+        chatContent.appendChild(div);
+    }
+
+    // 复制消息文本到剪贴板
+    function copyMessage(button) {
+        let messageText = button.previousElementSibling.textContent;
+        let tempInput = document.createElement("input");
+        tempInput.value = messageText;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        console.log(messageText)
+    }
+
+    
+
+    // 下载消息文件
+    function downloadMessage(button) {
+        let fileData = button.previousElementSibling;
+        let filename = fileData.previousElementSibling;
+        let filenameValue = filename.value;
+        let fileDataValue = fileData.value;
+        let downloadLink = document.createElement("a");
+        downloadLink.download = filenameValue;
+        downloadLink.href = fileDataValue;
+        downloadLink.click();
+    }
+</script>
+</body>
+</html>
