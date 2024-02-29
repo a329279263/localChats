@@ -5,10 +5,16 @@
 1.公司有一台电脑专门用于处理生产数据的查询报障啥的。
 无法访问外网，局域网的linux机器也无法访问-可能防火墙限制，故此需要搭建一个本地通信项目用于实现局域网之间的通信。
 
+在线测试：https://lzh329279263.cn/chats/
+
 ## 项目简介
 项目运行环境如下：
 - nodejs v14.17.0
 - win10
+- nginx
+- 或
+- CentOS Linux release 7.6.1810 (Core)
+- nodejs v16.20.2
 - nginx
 
 
@@ -33,6 +39,7 @@ npm install
 运行 webSocket 服务
 node server.js
 windows下直接运行 start.bat 或者 ws.vbs（后台运行）
+linux 运行 start.sh
 
 nginx配置
 
