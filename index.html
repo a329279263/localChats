@@ -144,8 +144,8 @@
             if ((socket && socket.readyState === WebSocket.OPEN) || reconnectTimer) {
                 return;
             }
-
-            socket = new WebSocket("ws://" + location.host + "/ws");
+            // 根据当前协议设置 WebSocket 的协议
+            socket = new WebSocket(location.protocol === 'https:' ? 'wss:' : 'ws:'+"//" + location.host + "/ws");
 
             function isFile(messageBlob) {
                 try {
