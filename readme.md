@@ -37,8 +37,9 @@ cd localChats/ws
 npm install
 
 运行 webSocket 服务
-node server.js
+
 windows下直接运行 start.bat 或者 ws.vbs（后台运行）
+
 linux 运行 start.sh
 
 nginx配置
