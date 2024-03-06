@@ -52,6 +52,21 @@ location ^~ /chats {
     proxy_set_header X-Nginx-Proxy true;
 }
 
+location /ws{
+    proxy_http_version 1.1;
+    proxy_set_header Host  $host;
+    proxy_set_header X-Real-Ip $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Nginx-Proxy true;
+    proxy_redirect off;
+    client_max_body_size 100m;
+    proxy_pass http://localhost:8888;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+
+或许不需要nginx，不过你需要更改 index.html 的 ws 地址
+
 访问项目
 在浏览器中访问
 http://192.168.2.216/chats/
