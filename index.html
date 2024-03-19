@@ -145,7 +145,7 @@
                 return;
             }
             // 根据当前协议设置 WebSocket 的协议
-            socket = new WebSocket(location.protocol === 'https:' ? 'wss:' : 'ws:'+"//" + location.host + "/ws");
+            socket = new WebSocket((location.protocol === 'https:' ? 'wss:' : 'ws:')+"//" + location.host + "/ws");
 
             function isFile(messageBlob) {
                 try {
@@ -314,7 +314,7 @@
         chatContent.scrollTop = chatContent.scrollHeight;
     }
 
-    
+
 
 
     // 下载消息文件
@@ -343,8 +343,8 @@
     document.getElementById("timeConvert").addEventListener("keydown", function(event) {
         event.keyCode === 13 && timeConvert();
     });
-    
-    
+
+
     function convertToIn() {
         var input = document.getElementById("excelInput").value;
         var lines = input.split('\n');
